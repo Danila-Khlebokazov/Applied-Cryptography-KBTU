@@ -32,7 +32,7 @@ def feistel(block: str, subkey: str) -> str:
         b_int = int(b, 2)
 
         num = S_BOXES[i][a_int][b_int]
-        new_block += f'{num:04b}'
+        new_block += f"{num:04b}"
 
     return permutation(new_block, FEISTEL_PERMUTATION_TABLE)
 
@@ -44,7 +44,7 @@ def round(block: str, subkey: str) -> str:
     :param subkey:
     :return:
     """
-    left = block[:int(BLOCK_SIZE / 2)]
+    left = block[: int(BLOCK_SIZE / 2)]
     right = block[int(BLOCK_SIZE / 2):]
 
     new_left = right

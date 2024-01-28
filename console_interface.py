@@ -1,13 +1,14 @@
 import curses
-import tkinter as tk
-from tkinter import filedialog
 import threading
 import time
+import tkinter as tk
 
-from des_cipher import bytes_to_bits, encode_bits as des_encode, bits_to_bytes, create_random_key, \
-    decode_bits as des_decode
+from tkinter import filedialog
+from des_cipher import bits_to_bytes, bytes_to_bits, create_random_key
+from des_cipher import decode_bits as des_decode
+from des_cipher import encode_bits as des_encode
 
-PROGRAM_NAME = 'SymmetricCipherEncoder'
+PROGRAM_NAME = "SymmetricCipherEncoder"
 VERSION = "0.9.0"
 AUTHOR = "Khlebokazov Danila"
 
@@ -70,7 +71,7 @@ def loading_screen(stdscr, progress, title="Обработка..."):
             stdscr.addch(indicator_y, indicator_x, char)
             stdscr.refresh()
             time.sleep(0.1)
-            stdscr.addch(indicator_y, indicator_x, ' ')
+            stdscr.addch(indicator_y, indicator_x, " ")
             stdscr.refresh()
     # Обновляем прогресс бар до конца
     stdscr.addstr(progress_bar_y, progress_bar_x + 1, "=" * 40)
@@ -125,8 +126,12 @@ def show_menu(stdscr, options, **kwargs):
         for i, (option, _) in enumerate(options):
             padding = " " * ((max_option_length - len(option)) + 2)
             if i == current_option:
-                stdscr.addstr(i + MENU_DOWN_SHIFT + ext_padding, 0, f"> {option}{padding}",
-                              curses.color_pair(1) | curses.A_REVERSE)
+                stdscr.addstr(
+                    i + MENU_DOWN_SHIFT + ext_padding,
+                    0,
+                    f"> {option}{padding}",
+                    curses.color_pair(1) | curses.A_REVERSE,
+                )
             else:
                 stdscr.addstr(i + MENU_DOWN_SHIFT + ext_padding, 0, f"  {option}{padding}", curses.color_pair(1))
 
@@ -223,11 +228,14 @@ OPTIONS = {
     "main": [show_menu, [("DES", "DES"), ("Выйти из программы", "exit_text")]],
     "DES": [show_menu, [("Шифровать", "des_encode"), ("Расшифровать", "des_decode"), ("Назад в меню", "back_main")]],
     "exit_text": [show_single_message, GOODBYE_TEXT, "exit"],
-    "des_encode": [open_file_dialog, show_file_menu,
-                   [("Сгенерировать ключ", "des_gen"), ("Ввести свой ключ(Пока не работает)", "des_input")]],
+    "des_encode": [
+        open_file_dialog,
+        show_file_menu,
+        [("Сгенерировать ключ", "des_gen"), ("Ввести свой ключ(Пока не работает)", "des_input")],
+    ],
     "des_decode": [open_file_dialog, des_decode_choice],
     "back_main": [change_state, "main"],
-    "congrats": [show_single_message, CONGRATS_TEXT, "main"]
+    "congrats": [show_single_message, CONGRATS_TEXT, "main"],
 }
 
 CURRENT_STATE = "hello"
