@@ -155,6 +155,8 @@ def enter_custom_key():
 
 def open_file_dialog(stdscr, next_func, *args, **kwargs):
     file_path = filedialog.askopenfilename(title="Выберите файл")
+    if not file_path:
+        show_single_message(stdscr, "NO FILE WAS PROVIDED", "main")
     next_func(stdscr, file_path, *args, **kwargs)
 
 
@@ -201,6 +203,9 @@ def des_encode_choice(stdscr, file_path, key: str = None):
 def des_decode_choice(stdscr, file_path):
     key_types = [("Text files", "*.bin")]
     key_path = filedialog.askopenfilename(title="Выберите файл ключа", filetypes=key_types)
+
+    if not key_path:
+        show_single_message(stdscr, "NO KEY WAS PROVIDED", "main")
 
     loading_thread = threading.Thread(target=loading_screen, args=(stdscr, stepper, DECODE_PROCESS_TEXT))
     loading_thread.start()
