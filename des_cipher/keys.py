@@ -7,7 +7,6 @@ from .utils import *
 def schedule_key(key: str = None) -> (str, [str]):
     if not key:
         key = create_random_key()
-        print(key)
 
     if len(key) != KEY_LENGTH:
         print("KEY IS NOT ENOUGH LENGTH!")

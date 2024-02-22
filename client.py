@@ -3,6 +3,9 @@ import sys
 import threading
 import pickle
 from des_cipher import encode_text, decode_text
+import tkinter as tk
+from tkinter import filedialog
+import base64
 
 HEADER_LENGTH = 10
 SERVER_HOST = ("localhost", 10000)
@@ -29,12 +32,16 @@ dialog_user = None
 userlist = []
 
 
+def get_save_path():
+    save_path = filedialog.askopenfilename(title="Выберите файл")
+    return save_path
+
+
 def send_connect_request(id):
     request = f"{len('CONNECT'.encode('UTF-8')):<{HEADER_LENGTH}}CONNECT".encode("UTF-8")
     usr_data = f"{len(str(id).encode('UTF-8')):<{HEADER_LENGTH}}{id}".encode("UTF-8")
     server.send(request + usr_data)
     print("Waiting...")
-
 
 
 def get_user_list():
@@ -75,6 +82,25 @@ def receive_message():
             data = server.recv(msg_length).decode("UTF-8")
 
             data = decode_text(data, secret_key)
+
+            if data[0].startswith("imagefile::"):
+
+                dir = f"d{server.getsockname()[1]}"
+                import os
+                if not os.path.exists(dir):
+                    # Создаем новую директорию
+                    os.makedirs(dir)
+
+                image = data[0].replace("imagefile::", "")
+                ext, image = image.split("EXTENSION")
+                from datetime import datetime
+                path = f"{dir}/{datetime.now()}.{ext}"
+                with open(path, "wb") as file:
+                    file.write(base64.decodebytes(image.encode("UTF-8")))
+
+                print(f"{username}: 'file:///{os.path.abspath(path).replace(' ', '%20')}'")
+                continue
+
             print(f"{username}: {data[0]}")
         except Exception as e:
             print(f"EXITED {e}")
@@ -85,13 +111,26 @@ get_user_list()
 receive = threading.Thread(target=receive_message)
 receive.start()
 
+root = tk.Tk()
+root.withdraw()  # Скрываем основное окно
+
 while is_connected:
     try:
         if not dialog_user:
             print("Enter to update, or print id of user you want ot connect")
         msg = input("")
+
+        if msg == "IMAGE":
+            image_path = get_save_path()
+            with open(image_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read())
+                msg = "imagefile::" + image_path.split(".")[-1] + "EXTENSION" + encoded_string.decode("UTF-8")
+
         if msg and dialog_user:
-            print("Me: " + msg)
+            if msg.startswith("imagefile::"):
+                print(f"Me: 'file:///{image_path.replace(' ', '%20')}'")
+            else:
+                print("Me: " + msg)
             msg = encode_text(msg, secret_key)[0]
 
             msg_header = f"{len(msg.encode('UTF-8')):<{HEADER_LENGTH}}".encode("UTF-8")
@@ -112,4 +151,11 @@ while is_connected:
 
     except KeyboardInterrupt:
         is_connected = False
+        import os
+
+        dir = "d" + str(server.getsockname()[1])
+        if os.path.exists(dir):
+            import shutil
+            shutil.rmtree(dir)
         server.close()
+        root.destroy()
