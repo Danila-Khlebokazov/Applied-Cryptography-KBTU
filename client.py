@@ -2,10 +2,13 @@ import socket
 import sys
 import threading
 import pickle
-from des_cipher import encode_text, decode_text
+from des_cipher import encode_text, decode_text, KEY_LENGTH
 import tkinter as tk
 from tkinter import filedialog
 import base64
+
+import random
+from quantum_lib import Gate
 
 HEADER_LENGTH = 10
 SERVER_HOST = ("localhost", 10000)
@@ -62,22 +65,62 @@ def receive_message():
             user_length = int(user_header.decode("UTF-8").strip())
             username = server.recv(user_length).decode("UTF-8")
 
-            msg_header = server.recv(HEADER_LENGTH)
-            msg_length = int(msg_header.decode("UTF-8").strip())
+            if username == "QKD-BB84":
+
+                # ----------- QUANTUM PART ----------- #
+                client_bases = [Gate(random.choice([Gate.GateBases.RECTANGULAR, Gate.GateBases.DIAGONAL])) for _ in
+                                range(3 * KEY_LENGTH)]
+
+                key = []
+
+                for gate in client_bases:
+                    header = server.recv(HEADER_LENGTH)
+                    q_length = int(header.decode("UTF-8").strip())
+                    data = server.recv(q_length)
+                    try:
+                        qubit = pickle.loads(data)
+                        result = gate.calculate(qubit)
+                        key.append(result)
+                    except:
+                        if data.decode("UTF-8") == "END":
+                            break
+                header = server.recv(HEADER_LENGTH)
+                gates_length = int(header.decode("UTF-8").strip())
+                gates = server.recv(gates_length).decode("UTF-8")
+
+                server.send(f"{len('QKD-BB84'.encode('UTF-8')):<{HEADER_LENGTH}}{'QKD-BB84'}".encode("UTF-8"))
+                client_gates = "".join([str(base.gate_type.value) for base in client_bases])
+                server.send(f"{len(client_gates.encode('UTF-8')):<{HEADER_LENGTH}}{client_gates}".encode("UTF-8"))
+
+                final_key = ""
+                for server_gate, client_gate, key_bit in zip(gates, client_gates, key):
+                    if server_gate == client_gate:
+                        final_key += str(key_bit)
+
+                print("Final key:", final_key)
+                secret_key = final_key[:KEY_LENGTH]
+
+                continue
+                # ----------- ------------ ----------- #
 
             if username == "CLIENTLIST":
+                msg_header = server.recv(HEADER_LENGTH)
+                msg_length = int(msg_header.decode("UTF-8").strip())
                 userlist = pickle.loads(server.recv(msg_length))
                 print(userlist)
                 continue
 
             if username == "DIALOG":
-                secret_key = server.recv(msg_length).decode("UTF-8")
+                # secret_key = server.recv(msg_length).decode("UTF-8")
                 if not dialog_user:
                     name_h = server.recv(HEADER_LENGTH)
                     name_length = int(name_h.decode("UTF-8").strip())
                     dialog_user = server.recv(name_length).decode("UTF-8")
                 print("You-re chatting with", dialog_user)
                 continue
+
+            msg_header = server.recv(HEADER_LENGTH)
+            msg_length = int(msg_header.decode("UTF-8").strip())
 
             data = server.recv(msg_length).decode("UTF-8")
 
@@ -120,7 +163,7 @@ while is_connected:
             print("Enter to update, or print id of user you want ot connect")
         msg = input("")
 
-        if msg == "IMAGE":
+        if msg == "IMAGE" and dialog_user:
             image_path = get_save_path()
             with open(image_path, "rb") as image_file:
                 encoded_string = base64.b64encode(image_file.read())
